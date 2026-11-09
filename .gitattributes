@@ -1,0 +1,4 @@
+# These files are verified by the application's SHA-256 manifest.
+/app/vendor/AutoLens-*/** -text
+/app/data/catalogs/legacy/CDGM.AGF -text
+*.exe binary

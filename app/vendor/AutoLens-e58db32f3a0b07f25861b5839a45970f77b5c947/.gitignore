@@ -1,0 +1,4 @@
+/results
+.vscode
+deeplens/__pycache__
+deeplens/**/*.pyc

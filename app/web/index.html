@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>初始结构优化工作台 · V10.0.0</title><link rel="stylesheet" href="/web/workbench.css"><link rel="stylesheet" href="/web/glass.css"><link rel="stylesheet" href="/web/light-results.css"><link rel="stylesheet" href="/web/analysis-suite.css"><link rel="stylesheet" href="/web/seq-import.css"><link rel="stylesheet" href="/web/requirements.css"><link rel="stylesheet" href="/web/desktop-theme.css"></head>
+<body>
+<header class="apphead">
+  <div class="identity"><h1>初始结构工作台 <span>V10.0.0</span></h1></div>
+  <div class="header-actions" role="group" aria-label="档案与视图">
+    <div class="librarytools">
+      <label class="sr-only" for="runLibrary">运行历史</label>
+      <select id="runLibrary"><option value="">运行历史 · 选择已保存的设计</option></select>
+      <button id="loadRun" type="button">载入</button>
+    </div>
+    <button id="btnOpenResults" type="button" title="读取之前保存的结果文件夹">读取档案</button>
+    <button id="btnSaveResults" type="button" disabled title="选择文件夹，保存当前查看任务的全部已有结果">保存全部结果</button>
+    <button id="focusStop" class="focusstop" type="button" disabled>停止优化</button>
+    <button id="focusResults" type="button" aria-pressed="false" title="收起参数控制台，扩大结果区；再次点击恢复">结果专注 ⤢</button>
+    <details id="moreActions" class="toolmenu">
+      <summary aria-label="更多工作台操作" title="更多工作台操作">⋯</summary>
+      <div class="toolmenu-panel">
+        <button id="refreshLibrary" type="button">刷新运行历史</button>
+        <span class="badge" id="devBadge">检测设备…</span>
+      </div>
+    </details>
+  </div>
+</header>
+<main>
+  <aside class="console">
+    <div class="consolehead"><span class="eyebrow">DESIGN CONSOLE</span><h2>设计控制台</h2><div class="consoletabs" role="group" aria-label="控制台内容"><button id="showParams" class="active">参数设置</button><button id="showLog">运行日志</button></div></div>
+    <div id="parameterScroll" class="parameters">
+    <!-- A. 光学技术指标 -->
+    <section class="panel">
+      <div class="phead"><h2>A · 光学技术指标</h2><span class="small">mm · °</span></div>
+      <div class="body"><div class="fields">
+        <div class="wide design-import-actions"><button id="importDesign" type="button">导入 SEQ / Zemax ZMX</button><button id="clearDesignImport" type="button" hidden>取消文件来源</button><p id="designImportSource" class="small"></p></div>
+        <label class="wide">已知参数（选择两项输入）<select id="image_geometry_pair"><option value="focal_field">焦距 ＋ 全视场 → 计算像高</option><option value="focal_height">焦距 ＋ 像高 → 计算全视场</option><option value="height_field">像高 ＋ 全视场 → 计算焦距</option></select></label>
+        <p class="small wide" id="imageGeometryHint" role="status">像高为传感器半径，全视场为对角全角；按一阶 f·tan(全角/2) 换算。</p>
+        <label>焦距 EFL (mm)<input id="foclen" type="number" step="0.1" value="20"><span class="geometry-derived" id="foclenDerived" hidden>自动计算</span></label>
+        <label>F 数<input id="fnum" type="number" step="0.1" value="3"></label>
+        <label>全视场角（对角）<input id="fov" type="number" step="0.5" value="40"><span class="geometry-derived" id="fovDerived" hidden>自动计算</span></label>
+        <label>初始后截距 BFL (mm)<input id="bfl" type="number" step="0.5" value="8"></label>
+        <label class="wide">总长上限 TTL (mm，留空=焦距+初始BFL)<input id="thickness" type="number" step="1" placeholder="28"></label>
+        <label>像高 / 传感器半径 (mm)<input id="imgh" type="number" step="0.1" placeholder="按已知参数计算"><span class="geometry-derived" id="imghDerived" hidden>自动计算</span></label>
+        <label>物距 / 工作距离 (mm)<input id="obj_depth" type="number" step="100" placeholder="20000 = 20 m（填正数）"></label>
+        <div class="chk wide"><input type="checkbox" id="object_at_infinity"><span>无穷远物方（平行入射，忽略工作距离）</span></div>
+        <div class="wavelength-range"><span>波长范围 (nm)</span><div class="rangeboxes"><label><input id="wavelength_min_nm" aria-label="波长范围起点，nm" type="number" min="300" max="1200" step="0.1" value="486"></label><span>～</span><label><input id="wavelength_max_nm" aria-label="波长范围终点，nm" type="number" min="300" max="1200" step="0.1" value="656"></label></div><p id="spectrumHint">程序自动选择中心和采样点；上下限相同表示单色光。</p></div>
+        <label>远心角 / CRA 上限 (°)<input id="cra_cap" type="number" step="0.5" value="20" placeholder="默认20°，主光线与像面法线夹角"></label>
+        <label>畸变上限 (%)<input id="distortion_max" type="number" step="0.5" value="3" placeholder="默认 3%"></label>
+        <div class="chk"><input type="checkbox" id="cover_glass"><span>传感器保护玻璃（工业相机）</span></div>
+        <div class="wide req-cover-fields" id="coverParameters">
+          <label>保护片材料<input id="cover_material" value="h-k9l" placeholder="如 h-k9l / n-bk7"></label>
+          <label>厚度 (mm)<input id="cover_thickness_mm" type="number" min="0.01" step="0.05" value="0.3"></label>
+          <label>至像面间距 (mm)<input id="cover_gap_mm" type="number" min="0.01" step="0.05" value="0.3"></label>
+        </div>
+        <label class="selhalf">主镜片片数（保护片另计）<select id="elements">
+          <option>1</option><option>2</option><option>3</option><option selected>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option>
+        </select></label>
+        <label class="selhalf">光阑位于第几片后<select id="stop_pos"></select></label>
+        <details class="wide req-details"><summary>视场与固定结构条件</summary>
+          <div class="fields req-fields">
+            <label>视场设置<select id="field_mode"><option value="auto">自动取点</option><option value="manual">手动坐标表</option></select></label>
+            <label>视场定义<select id="field_definition"><option value="angle">物方角度（°）</option><option value="object_height">物高（mm）</option></select></label>
+            <label>视场点数<input id="field_count" type="number" min="1" max="32" step="1" value="5"></label>
+            <label>自动分布<select id="field_distribution"><option value="angle">等角度</option><option value="image_height">等一阶像高</option></select></label>
+            <button id="editFields" type="button" class="wide">查看 / 编辑 X、Y、权重</button>
+            <p class="small wide" id="fieldSummary">自动生成5个视场；与光瞳采样环数分别设置。</p>
+            <label class="wide">波长设置<select id="spectrum_mode" disabled><option value="range">原生三点：最小 / 中点 / 最大</option></select></label>
+            <label class="wide req-discrete">离散波长 (nm，逗号分隔)<input id="discrete_wavelengths_nm" value="486.1, 587.6, 656.3"></label>
+            <label class="req-discrete">主波长 (nm)<input id="discrete_primary_nm" type="number" min="300" max="1200" step="0.1" value="587.6"></label>
+            <label class="req-discrete">对应权重<input id="discrete_weights" value="1, 1, 1"></label>
+            <label>固定光阑坐标 (mm)<input id="fixed_stop_z_mm" type="number" step="0.1" placeholder="留空可移动；相对首面"></label>
+            <label>固定光阑半径 (mm)<input id="fixed_stop_radius_mm" type="number" min="0.001" step="0.1" placeholder="留空按F数设置"></label>
+            <label class="wide">固定总长 TTL (mm)<input id="fixed_ttl_mm" type="number" step="0.1" placeholder="留空仅限制上限"></label>
+            <label class="wide">胶合分组（每组玻璃片数）<input id="lens_group_sizes" placeholder="留空全部单片；如1,2,1表示单片+双胶合+单片"></label>
+            <label class="wide">固定主镜片玻璃（可选）<input id="fixed_glasses" placeholder="留空使用起始玻璃；自动换材选择GlassExpert；或按片固定牌号"></label>
+            <button id="inspectRequirements" type="button" class="wide">校核当前设计条件</button>
+            <p id="requirementsStatus" class="small wide" role="status"></p>
+          </div>
+        </details>
+        <label>玻璃制造商 / 目录<select id="glass_table">
+          <option value="CDGM" selected>成都光明 CDGM</option><option value="SCHOTT">肖特 SCHOTT</option><option value="OHARA" disabled>小原 OHARA（未安装目录）</option>
+        </select></label>
+        <label>玻璃目录版本<select id="glass_catalog_revision"><option value="202609" selected>2026-09 官网目录</option><option value="202409">2024-09 兼容目录</option></select></label>
+        <label>允许使用的玻璃范围<select id="glass_policy"><option value="frequent">仅 MA</option><option value="frequent_12" selected>MA + A（常用，默认）</option><option value="frequent_123">MA + A + B</option><option value="all">全部可用牌号</option><option value="custom">自定义勾选牌号</option><option value="legacy_common">兼容旧版常用清单</option></select></label>
+        <div class="glassselection"><button id="manageGlasses" type="button">查看 / 勾选玻璃牌号</button><p id="glassSelectionNote" class="small">读取本地玻璃目录…</p></div>
+        <div class="chk"><input type="checkbox" id="aspheric"><span>允许非球面（收敛更快，加工更贵）</span></div>
+      </div></div>
+    </section>
+
+    <!-- B. 机械与加工边界 -->
+    <section class="panel">
+      <details>
+        <summary class="phead" style="border-bottom:0;padding:11px 14px"><h2>B · 机械与加工边界</h2><span class="small">留空 = 通用机械边界</span></summary>
+        <div class="body"><div class="fields">
+          <label>后截距下限 BFL min<input id="bfl_min" type="number" step="0.5" placeholder="默认"></label>
+          <label>后截距上限 BFL max<input id="bfl_max" type="number" step="0.5" placeholder="默认"></label>
+          <label>总长下限 TTL min<input id="ttl_min" type="number" step="1" placeholder="默认"></label>
+          <label>总长上限 TTL max<input id="ttl_max" type="number" step="1" placeholder="默认"></label>
+          <label>空气间隔(边缘) min<input id="air_edge_min" type="number" step="0.05" placeholder="默认"></label>
+          <label>空气间隔(边缘) max<input id="air_edge_max" type="number" step="0.5" placeholder="默认"></label>
+          <label>空气间隔(中心) min<input id="air_center_min" type="number" step="0.05" placeholder="默认"></label>
+          <label>空气间隔(中心) max<input id="air_center_max" type="number" step="0.5" placeholder="默认"></label>
+          <label>玻璃厚度(边缘) min<input id="thick_edge_min" type="number" step="0.1" placeholder="默认"></label>
+          <label>玻璃厚度(边缘) max<input id="thick_edge_max" type="number" step="0.5" placeholder="默认"></label>
+          <label>玻璃厚度(中心) min<input id="thick_center_min" type="number" step="0.1" placeholder="默认"></label>
+          <label>玻璃厚度(中心) max<input id="thick_center_max" type="number" step="0.5" placeholder="默认"></label>
+          <label>矢高/口径比上限<input id="sag2diam_max" type="number" step="0.05" placeholder="默认"></label>
+          <label>口径/厚度比上限<input id="diam2thick_max" type="number" step="1" placeholder="默认"></label>
+          <label>最厚/最薄比上限<input id="tmax2tmin_max" type="number" step="1" placeholder="默认"></label>
+          <label>单面倾角上限 (°)<input id="surf_angle_max" type="number" step="1" placeholder="默认"></label>
+          <label>单面弯折角上限 (°)<input id="bend_angle_max" type="number" step="1" placeholder="默认"></label>
+        </div></div>
+      </details>
+    </section>
+
+    <!-- C. 优化行为 -->
+    <section class="panel">
+      <details open>
+        <summary class="phead" style="border-bottom:0;padding:11px 14px"><h2>C · 优化行为</h2><span class="small">迭代 · 采样 · 权重</span></summary>
+        <div class="body">
+          <div class="fields">
+            <p id="engineNote" class="small wide"></p>
+            <label><span id="initialBudgetLabel">课程学习迭代</span><input id="curriculum_iters" type="number" step="1" value="2000"></label>
+            <label><span id="refineBudgetLabel">精调迭代</span><input id="refine_iters" type="number" step="1" value="3000"></label>
+            <label>畸变损失权重<input id="w_dist" type="number" step="0.05" value="0.1"></label>
+            <label>原生课程光瞳裕量（固定）<input id="scale_pupil" type="number" step="0.01" value="1.05" disabled></label>
+            <label><span id="ringUsageLabel">Optiland光瞳采样环数</span><input id="num_ring" type="number" step="1" value="5"></label>
+            <label><span id="sppUsageLabel">每视场光线数</span><input id="spp" type="number" step="16" value="64"></label>
+            <label class="selhalf">点列优化参考<select id="centroid">
+              <option value="auto" selected>自动（按内核策略）</option>
+              <option value="centroid">质心</option>
+              <option value="pinhole">针孔理想</option>
+            </select></label>
+            <label class="optiland-only wide">点列优化参考<select id="optiland_spot_reference"><option value="polychromatic">多色共同像点（主波长质心）</option><option value="monochromatic">各波长分别取质心（V7方式）</option></select></label>
+            <label class="selhalf">计算设备<select id="device">
+              <option value="auto" selected>自动</option>
+              <option value="cuda">GPU</option>
+              <option value="cpu">CPU</option>
+            </select></label>
+          </div>
+          <details class="optiland-only" open><summary>Optiland 原生优化设置</summary><div class="fields">
+            <label>玻璃优化<select id="optiland_glass_mode"><option value="fixed">固定起始玻璃</option><option value="expert">原生 GlassExpert 自动换玻璃</option></select></label>
+            <label>换玻璃邻近数量<input id="optiland_glass_neighbours" type="number" min="2" max="32" step="1" value="3"></label>
+            <label>连续优化求解器<select id="optiland_solver"><option value="trf">TRF（支持边界）</option><option value="dogbox">Dogbox（支持边界）</option></select></label>
+            <label>收敛容差<input id="optiland_tol" type="number" min="0.000000000001" max="0.1" step="0.0001" value="0.001"></label>
+            <label>变量尺度<select id="optiland_x_scale"><option value="default">原生默认</option><option value="jac">按 Jacobian 调整</option></select></label>
+            <label>光阑瞄准<select id="optiland_aiming"><option value="iterative">迭代瞄准</option><option value="robust">稳健瞄准</option><option value="paraxial">近轴瞄准</option></select></label>
+            <label>瞄准最多迭代<input id="optiland_aiming_iters" type="number" min="1" max="100" step="1" value="12"></label>
+            <label>瞄准容差<input id="optiland_aiming_tol" type="number" min="0.000000000001" step="0.0000001" value="0.0000001"></label>
+            <label>边缘厚度约束权重<input id="optiland_edge_weight" type="number" min="0.000001" step="1" value="10"></label>
+            <label>手动目标像高权重<input id="optiland_target_weight" type="number" min="0.000001" step="1" value="10"></label>
+            <label class="wide">固定结构处理<select id="optiland_geometry_mode"><option value="native">原生变量与操作数（无逐步间隔投影）</option><option value="v7_compat">V7固定几何兼容（额外间隔投影）</option></select></label>
+            <p class="small wide" id="optilandGlassHint" hidden>GlassExpert 会对多种玻璃组合分别局部优化；预算按每次局部运行计算。</p>
+          </div></details>
+          <div class="chk"><input type="checkbox" id="optim_mat" checked><span>原生 n/V 预优化（固定主片玻璃时关闭，保护片保持固定）</span></div>
+          <div class="chk"><input type="checkbox" id="prune" checked disabled><span>原生形状／有效口径修整（始终执行）</span></div>
+          <details style="margin-top:6px">
+            <summary>高级：正则项权重（CRA / 弯折 / 间隔 / 包络 / 面形）</summary>
+            <div class="fields">
+              <label>CRA 权重<input id="w_cra" type="number" step="0.1" value="1"></label>
+              <label>弯折权重<input id="w_ray_bend" type="number" step="0.1" value="1"></label>
+              <label>间隔权重<input id="w_clearance" type="number" step="0.1" value="1"></label>
+              <label>包络权重<input id="w_envelope" type="number" step="0.1" value="1"></label>
+              <label>面形权重<input id="w_profile" type="number" step="0.1" value="1"></label>
+            </div>
+          </details>
+          <div class="tabs presets" style="margin-top:10px">
+            <button type="button" onclick="preset('fast')">快速试跑</button>
+            <button type="button" class="active" onclick="preset('std')">标准</button>
+            <button type="button" onclick="preset('deep')">充分优化</button>
+          </div>
+          
+        </div>
+      </details>
+    </section>
+  </div>
+    <div id="logPanel" class="logpanel" hidden><div class="logintro">当前所选运行的实际进程日志，最多显示末尾 120 行。</div><pre id="consoleLog">载入或启动一次运行后显示日志。</pre></div>
+    <div class="consolefoot"><div id="errBox" role="alert"></div>
+      <div class="workflow-controls">
+        <label>优化路线<select id="route"><option value="autolens" selected>全程 AutoLens</option><option value="optiland">全程 Optiland</option></select></label>
+      </div>
+      <p id="resumeSource" class="small" hidden></p><button id="clearResume" class="ghost" type="button" hidden>取消快照来源，重新生成</button><div class="btns"><button id="btnStart" onclick="start()">开始优化 <span>↗</span></button><button id="btnStop" onclick="stop()" disabled>停止</button></div><p id="workflowModeHint">直接优化 → 分析 → 导出，无需选择候选。</p></div>
+  </aside>
+  <section class="workspace">
+    <div class="workhead"><div><span class="eyebrow">OPTICAL WORKSPACE</span><h2 id="designTitle">新的镜头设计</h2></div><button id="followLive" class="ghost" title="返回正在运行的任务">跟随当前任务</button></div>
+    <div class="runinfo" id="runinfo" hidden><span id="runinfoTxt"></span><button id="btnRefill" class="mini" type="button">回填本次参数</button></div>
+    <div class="statusstrip"><span class="dot" id="dot"></span><span id="stxt">准备就绪</span><span id="screeningBadge" class="qualitybadge">尚未计算</span><span id="siter">设定规格，或载入已有设计</span><span id="srate"></span><div class="barwrap"><div id="bar"></div></div></div>
+    <div class="stats">
+      <div class="stat"><span id="lossLabel">实测 F 数</span><strong id="statLoss">—</strong><small id="statLossSub">目标 —</small></div>
+      <div class="stat"><span>实测焦距 <em>mm</em></span><strong id="statEfl">—</strong><small id="statEflSub">目标 —</small></div>
+      <div class="stat"><span>近轴推算全视场 <em>°</em></span><strong id="statFov">—</strong><small id="statFovSub">目标 —</small></div>
+      <div class="stat" title="当前保存处方的传感器半径（半对角像高），不是追迹得到的边缘主光线像高"><span>像高（半径）<em>mm</em></span><strong id="statImageHeight">—</strong></div>
+      <div class="stat"><span>平均点列 RMS <em>mm</em></span><strong id="statRms">—</strong><small id="statRmsSub">各采样波长独立质心 · 3视场</small></div>
+    </div>
+    <div class="workspacebar"><nav id="viewTabs" class="viewtabs" role="tablist" aria-label="光学分析视图">
+      <button role="tab" id="tab-overview" data-tab="overview" aria-controls="view-overview" aria-selected="true" class="active">总览</button>
+      <button role="tab" id="tab-layout" data-tab="layout" aria-controls="view-layout" aria-selected="false" tabindex="-1">光路布局</button>
+      <button role="tab" id="tab-three" data-tab="three" aria-controls="view-three" aria-selected="false" tabindex="-1">3D 结构</button>
+      <button role="tab" id="tab-spot" data-tab="spot" aria-controls="view-spot" aria-selected="false" tabindex="-1">点列图</button>
+      <button role="tab" id="tab-mtf" data-tab="mtf" aria-controls="view-mtf" aria-selected="false" tabindex="-1">MTF</button>
+      <button role="tab" id="tab-aberration" data-tab="aberration" aria-controls="view-aberration" aria-selected="false" tabindex="-1">场曲 / 畸变 / 色差</button>
+      <button role="tab" id="tab-fan" data-tab="fan" aria-controls="view-fan" aria-selected="false" tabindex="-1">光扇 / 赛德尔</button>
+      <button role="tab" id="tab-advanced" data-tab="advanced" aria-controls="view-advanced" aria-selected="false" tabindex="-1">更多分析</button>
+      <button role="tab" id="tab-prescription" data-tab="prescription" aria-controls="view-prescription" aria-selected="false" tabindex="-1">镜头处方</button>
+      
+      <button role="tab" id="tab-metrics" data-tab="metrics" aria-controls="view-metrics" aria-selected="false" tabindex="-1">指标对照</button>
+    </nav></div>
+    <div class="resulttools"><div class="lensref"><span class="statuslight"></span><span id="lensSource">尚未载入处方</span></div><label class="analysis-engine-label">分析内核<select id="analysisEngine" title="启动时保存此选择；切换不会改变已启动任务的自动分析内核" aria-label="分析内核，与优化路线独立"><option value="optiland">Optiland</option><option value="autolens">AutoLens</option></select></label><span id="analysisSource" class="analysis-source">分析内核载入中…</span><select id="snapshotSelect" aria-label="选择保存处方" title="分析、导出和继续优化均使用此处选中的结构"></select><button id="btnResume" type="button" disabled>从此处继续优化</button><button id="btnAnalysis" disabled>计算分析</button>
+      <details id="resultExport" class="toolmenu">
+        <summary>导出处方</summary>
+        <div class="toolmenu-panel">
+          <a id="expZmx" class="disabled" href="#" aria-disabled="true" tabindex="-1">Zemax ZMX ↗</a>
+          <a id="expSeq" class="disabled" href="#" aria-disabled="true" tabindex="-1">CODE V SEQ ↗</a>
+          <a id="jsonDownload" class="disabled" href="#" aria-disabled="true" tabindex="-1" download>原生 JSON ↓</a>
+        </div>
+      </details>
+    </div>
+    <div id="viewScroll" class="viewscroll">
+      <section id="view-overview" class="view active" role="tabpanel" aria-labelledby="tab-overview">
+        <div class="overviewgrid">
+          <article class="plotcard"><div class="phead"><h3 id="overviewLayoutTitle">优化流程保存光路</h3><button class="textbutton" data-open="layout">展开 ↗</button></div><div id="overviewLayout" class="preview"><div class="empty"><span>◈</span><b>让初始结构从这里开始</b><p>填写左侧规格开始优化，或从顶部载入 本版 的运行。</p></div></div></article>
+          <article class="plotcard"><div class="phead"><h3 id="overviewMtfTitle">Optiland 波段综合 MTF</h3><button class="textbutton" data-open="mtf">展开 ↗</button></div><div id="overviewMtf" class="preview"><div class="empty"><span>⌁</span><b>等待像质分析</b><p>有最终处方后，选择分析内核计算。</p></div></div></article>
+          <article class="plotcard"><div class="phead"><h3 id="overviewSpotTitle">Optiland 点列图</h3><button class="textbutton" data-open="spot">展开 ↗</button></div><div id="overviewSpot" class="preview"><div class="empty"><span>⁙</span><b>等待点列图</b><p>由所选分析内核实际追迹计算。</p></div></div></article>
+          <article class="plotcard"><div class="phead"><h3>收敛过程</h3><span class="small" id="chartNote">暂无迭代记录</span></div><div class="chartwrap"><div id="chartEmpty" class="empty" hidden><b>当前处方没有优化曲线</b><p>参考处方用于查看光学结果；运行优化后，这里会显示真实收敛记录。</p></div><canvas id="chart" width="1000" height="250"></canvas><div class="chartleg"><i></i><span id="chartRmsLegend">训练 RMS 项</span> <i class="reg"></i>正则项 ×10</div></div></article>
+        </div>
+        <div id="anaPanel" class="analysisnote"><span id="anaStatus">分析尚未计算。MTF默认综合全部采样波长。</span><div id="anaGrid" hidden></div></div>
+      </section>
+      <section id="view-layout" class="view" role="tabpanel" aria-labelledby="tab-layout" hidden><article class="plotcard fullplot"><div class="phead"><h3>光路布局</h3><span class="small" id="layoutName">保存的实际追迹图</span></div><div class="imgwrap" id="imgwrap"><div class="empty"><b>尚无光路布局</b><p>第一次结构保存后自动刷新。</p></div></div><div class="filebar" id="files"></div></article></section>
+      <section id="view-three" class="view" role="tabpanel" aria-labelledby="tab-three" hidden><article class="plotcard threecard"><div class="phead"><h3>3D 处方模型 <small>mm</small></h3><div class="inlinecontrols"><button id="viewIso">斜视</button><button id="viewSide">侧视</button><button id="reset3d">重置</button><label class="chk"><input id="wire3d" type="checkbox" checked>网格</label></div></div><div class="canvasbox"><canvas id="lens3d" aria-label="镜片几何三维视图，可拖动旋转，滚轮缩放"></canvas><div id="threeEmpty" class="canvasempty">载入处方后显示 3D 模型</div><span class="viewhint">拖动旋转 · 滚轮缩放 · 双击重置</span></div><div class="modellegend"><span><i class="glass"></i>玻璃</span><span><i class="stop"></i>光阑</span><span><i class="sensor"></i>像面</span><span id="geometryNote">依据处方矢高绘制几何模型；光线追迹见光路布局。</span></div></article></section>
+      <section id="view-spot" class="view" role="tabpanel" aria-labelledby="tab-spot" hidden><p class="viewnote">几何点列图 · 保存的全部采样波长 · 视场由桥接后的实测焦距与像高确定，具体数值见图。</p><div id="plot-spot" class="analysisplot"></div></section>
+      <section id="view-mtf" class="view" role="tabpanel" aria-labelledby="tab-mtf" hidden><div class="mtfcontrols"><label>显示波长<select id="mtfWavelength"><option value="all">全部采样波长 · 综合MTF</option></select></label><p id="mtfSpectrumNote">按保存处方的采样波长计算，T / S 为切向 / 弧矢向。</p></div><p class="viewnote">综合复数OTF保留横向色差；几何光线加圆瞳衍射包络近似，不等同于完整波前衍射MTF。波长范围采用有限采样，非连续全波段精确积分。</p><div id="plot-mtf" class="analysisplot"></div></section>
+      <section id="view-aberration" class="view" role="tabpanel" aria-labelledby="tab-aberration" hidden><p class="viewnote">场曲与网格畸变使用同一保存处方和像面；各波长与视场标注见图。</p><div class="aberrationgrid"><div id="plot-curvature" class="analysisplot"></div><div id="plot-distortion" class="analysisplot"></div></div></section>
+      <section id="view-fan" class="view" role="tabpanel" aria-labelledby="tab-fan" hidden><p class="viewnote">实际光线像差扇图 · 配置的多波长 · 归一化瞳孔坐标与横向光线像差（mm）。</p><div id="plot-fan" class="analysisplot"></div></section>
+      <section id="view-advanced" class="view" role="tabpanel" aria-labelledby="tab-advanced" hidden></section>
+      <section id="view-prescription" class="view" role="tabpanel" aria-labelledby="tab-prescription" hidden><article class="plotcard"><div class="phead"><h3>镜头处方 <small>长度 mm · 波长 µm</small></h3><span id="prescriptionMeta" class="small"></span></div><div class="tablescroll"><table class="prescription"><thead><tr><th>面</th><th>类型</th><th>曲率半径 R</th><th>到下一面</th><th>半口径</th><th>面后介质</th><th>nd</th><th>Vd</th></tr></thead><tbody id="prescriptionRows"><tr><td colspan="8" class="empty">尚无处方</td></tr></tbody></table></div><div id="asphericDetails" class="viewnote"></div></article></section>
+      <section id="view-metrics" class="view" role="tabpanel" aria-labelledby="tab-metrics" hidden><p class="viewnote">共同评价使用处方保存的全部设计视场、波长和权重；历史记录以其协议为准。当前指标对应所选处方，收敛曲线和进度条对应所选运行的历史。计算结束不代表全项达标。颜色的±5%范围仅供偏差参考，不是用户验收容差。</p><p class="viewnote" id="metricProtocol">评价定义随保存记录标注。</p><article class="plotcard"><div class="phead"><h3>目标与记录值（计算记录，非全项验收）</h3><small>初始 / 续算起点 → 当前</small></div><div class="tablescroll"><table>
+        <tr><th>指标</th><th>目标</th><th>初始/续算起点</th><th>当前</th></tr>
+        <tr><td>焦距 (mm)</td><td class="tgt" id="t_efl">—</td><td id="m0_efl">—</td><td id="m_efl">—</td></tr>
+        <tr><td>近轴推算全视场 (°)</td><td class="tgt" id="t_fov">—</td><td id="m0_fov">—</td><td id="m_fov">—</td></tr>
+        <tr><td>F 数</td><td class="tgt" id="t_fnum">—</td><td id="m0_fnum">—</td><td id="m_fnum">—</td></tr>
+        <tr><td>平均点列 RMS (mm)</td><td class="tgt">—</td><td id="m0_rms">—</td><td id="m_rms">—</td></tr>
+        <tr><td>后截距 BFL (mm)</td><td class="tgt" id="t_bfl">—</td><td id="m0_bfl">—</td><td id="m_bfl">—</td></tr>
+        <tr><td>总长 TTL (mm)</td><td class="tgt" id="t_ttl">—</td><td id="m0_ttl">—</td><td id="m_ttl">—</td></tr>
+        <tr><td>最大 CRA (°)</td><td class="tgt" id="t_cra">—</td><td id="m0_cra">—</td><td id="m_cra">—</td></tr>
+        <tr><td>最大畸变 (%)</td><td class="tgt" id="t_dist">—</td><td id="m0_dist">—</td><td id="m_dist">—</td></tr>
+        <tr><td>平均追迹有效率</td><td class="tgt">—</td><td id="m0_val">—</td><td id="m_val">—</td></tr>
+      <tr><td>最差视场/波长追迹有效率</td><td class="tgt">参考值95%（不控制优化流程）</td><td id="m0_vmin">—</td><td id="m_vmin">—</td></tr>
+      </table></div></article></section>
+    </div>
+    <footer class="workfooter"><span id="footerSource">AutoLens / Optiland · 单内核直跑</span><span id="footerStatus" role="status">所有视图来自保存处方或实际运行记录</span></footer>
+  </section>
+</main>
+<dialog id="courseRestartDialog" class="stop-confirm" aria-labelledby="courseRestartTitle"><h2 id="courseRestartTitle">重新启动原生课程？</h2><p>原生课程将从保存结构重新启动，光阑会重新渐进，不是完整断点恢复。</p><p>确认后保留镜片结构，重新执行课程，再进入精调。</p><div class="dialogtools"><button id="cancelCourseRestart" type="button" autofocus>取消</button><button id="confirmCourseRestart" type="button" class="primary">确认重启课程</button></div></dialog>
+<dialog id="stopConfirmDialog" class="stop-confirm" aria-labelledby="stopConfirmTitle"><h2 id="stopConfirmTitle">确定停止优化吗？</h2><p>确认后会在安全计算边界保存当前结构。之后可点击“继续优化”接着优化。</p><div class="dialogtools"><button id="cancelStop" type="button" autofocus>暂不停止</button><button id="confirmStop" type="button" class="primary">确定停止</button></div></dialog>
+<dialog id="plotDialog"><div class="dialogtools"><span id="dialogTitle">分析图</span><button id="closePlot" aria-label="关闭大图">关闭 ×</button></div><img id="dialogImage" alt="放大的分析图"></dialog>
+<dialog id="glassDialog" class="glassdialog"><div class="dialogtools"><div><strong id="glassDialogTitle">玻璃可用池</strong><p id="glassCatalogSource" class="small"></p></div><button id="closeGlass" type="button">取消 ×</button></div><div class="glassfilters"><input id="glassSearch" type="search" placeholder="搜索牌号，如 H-K9L"><select id="glassFrequencyFilter" aria-label="筛选 MA / A / B 熔炼频次"><option value="all">所有熔炼频次</option><option value="MA">MA</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="NEW">NEW</option><option value="unknown">分级未知</option></select><button id="glassSelectVisible" type="button">选中筛选结果</button><button id="glassClear" type="button">清空</button></div><div class="glasspresets"><select id="savedGlassPools" aria-label="保存的自定义玻璃池"><option value="">保存的自定义清单</option></select><button id="glassLoadPreset" type="button">载入</button><input id="glassPoolName" type="text" placeholder="自定义清单名称"><button id="glassSavePreset" type="button">保存清单</button></div><div class="glasslist"><table><thead><tr><th>选用</th><th>玻璃牌号</th><th>nd</th><th>Vd</th><th>熔炼频次</th><th>相对成本（库值）</th><th>目录状态</th></tr></thead><tbody id="glassRows"></tbody></table></div><div class="glassdialogfoot"><span id="glassCount" role="status"></span><button id="applyGlass" type="button">应用可用牌号</button></div><p id="glassDialogNote" class="glassdisclaimer">频次为历史熔炼分级，不是使用次数或实时库存；停用、排除替换和不支持的材料不可选。</p></dialog>
+<dialog id="fieldsDialog" class="requirements-dialog"><div class="dialogtools"><strong>视场坐标与权重</strong><button id="closeFields" type="button">取消 ×</button></div><p id="fieldsUnitNote" class="small"></p><p class="small">坐标、顺序和重复行均保留。目标像高X/Y可同时留空，由一阶关系生成；填写后按给定目标优化。</p><div class="requirements-table"><table><thead><tr><th>#</th><th>X</th><th>Y</th><th>权重</th><th>目标X (mm)</th><th>目标Y (mm)</th><th></th></tr></thead><tbody id="fieldRows"></tbody></table></div><div class="dialogtools"><button id="addField" type="button">增加一行</button><span id="fieldsError" role="alert"></span><button id="applyFields" type="button">应用为手动视场</button></div></dialog>
+<dialog id="requirementsDialog" class="requirements-dialog"><div class="dialogtools"><strong>设计条件校核</strong><button id="closeRequirements" type="button">关闭 ×</button></div><div id="requirementsReport"></div></dialog>
+<script src="/web/controls.js"></script><script src="/web/glass-ui.js"></script><script src="/web/requirements-ui.js"></script><script src="/web/design-import.js"></script><script src="/web/viewer3d.js"></script><script src="/web/workbench.js"></script><script src="/web/analysis-suite.js"></script><script src="/web/seq-import.js"></script><script src="/web/desktop-toolbar.js"></script>
+</body></html>
+
+

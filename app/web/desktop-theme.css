@@ -1,0 +1,333 @@
+/* Desktop appearance shared with the field-of-view planner. Optical plots keep their own styling. */
+:root {
+  --bg: #f4f5f8;
+  --surface: #fff;
+  --line: #dcdfe6;
+  --quiet-line: #e7e9ee;
+  --sidebar: #eeeff3;
+  --segment: #e7e8ee;
+  --text: #202127;
+  --muted: #5c606b;
+  --primary: #0064d6;
+  --accent: #007aff;
+  --control: #fafafd;
+  --control-border: #d6d9e2;
+  --control-height: 32px;
+  --control-radius: 7px;
+  --card-radius: 12px;
+  --result-gutter: 12px;
+  --sidebar-width: clamp(272px, 24vw, 370px);
+}
+
+body, .workspace { background: var(--bg); }
+button, .toolmenu > summary {
+  border-color: var(--line);
+  border-radius: var(--control-radius);
+  color: var(--text);
+}
+button:not(:disabled):hover { background: #ebedf2; border-color: var(--control-border); }
+button:focus-visible, .toolmenu > summary:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.apphead {
+  height: auto;
+  min-height: 54px;
+  gap: 6px 16px;
+  padding: 8px 16px;
+  flex-wrap: wrap;
+  background: var(--bg);
+  border-color: var(--line);
+  position: relative;
+  z-index: 5;
+}
+.identity h1 { font-size: 20px; font-weight: 650; line-height: 26px; letter-spacing: -.35px; }
+.identity h1 span {
+  margin-left: 4px;
+  padding: 2px 5px;
+  vertical-align: 2px;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--segment);
+}
+.header-actions {
+  display: flex;
+  flex: 1 1 640px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  position: relative;
+}
+.librarytools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  flex: 0 1 clamp(270px, 30vw, 410px);
+  min-width: 180px;
+  max-width: 100%;
+  gap: 0;
+  margin: 0;
+}
+.header-actions > button, .librarytools > button, .toolmenu > summary {
+  min-height: var(--control-height);
+  padding: 0 9px;
+  white-space: nowrap;
+  font-size: 12px;
+  background: var(--surface);
+}
+.librarytools select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  height: var(--control-height);
+  padding-block: 4px;
+  border-radius: var(--control-radius) 0 0 var(--control-radius);
+  background-color: var(--surface);
+  font-size: 12px;
+}
+.librarytools > button {
+  border-left: 0;
+  border-radius: 0 var(--control-radius) var(--control-radius) 0;
+}
+.librarytools > .select-full-label {
+  grid-column: 1 / -1;
+  order: 1;
+  padding: 2px 4px 0;
+  font-size: 10px;
+  line-height: 1.3;
+}
+#btnSaveResults:not(:disabled), #btnStart, #btnAnalysis:not(:disabled), #applyGlass, .suite-tools .suite-start {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: none;
+}
+#btnSaveResults:not(:disabled):hover, #btnStart:not(:disabled):hover, #btnAnalysis:not(:disabled):hover,
+#applyGlass:not(:disabled):hover, .suite-tools .suite-start:not(:disabled):hover {
+  background: #0058bd;
+  border-color: #0058bd;
+}
+#focusResults { background: var(--surface); color: var(--text); border-color: var(--line); }
+.results-focused #focusResults { background: var(--segment); color: #005ebb; }
+
+.toolmenu { position: relative; flex: none; }
+.toolmenu > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  line-height: 1.25;
+}
+.toolmenu > summary::before { content: none; }
+.toolmenu > summary::-webkit-details-marker { display: none; }
+.toolmenu[open] > summary, .toolmenu > summary:hover { background: var(--segment); }
+#moreActions { position: static; }
+#moreActions > summary { width: 34px; padding: 0; font-size: 19px; }
+#resultExport > summary::after { content: '▾'; color: var(--muted); font-size: 10px; }
+.toolmenu-panel {
+  display: grid;
+  gap: 2px;
+  position: absolute;
+  inset: calc(100% + 5px) 0 auto auto;
+  z-index: 20;
+  min-width: 148px;
+  max-width: calc(100vw - 24px);
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 4px 14px #2021271a;
+}
+.toolmenu:not([open]) > .toolmenu-panel { display: none; }
+.toolmenu-panel > button, .toolmenu-panel > a {
+  display: block;
+  padding: 6px 8px;
+  text-align: start;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text);
+}
+.toolmenu-panel > a:not(.disabled):hover { background: #ebedf2; }
+.apphead .toolmenu-panel > .badge {
+  display: block;
+  max-width: 240px;
+  margin: 3px 4px 2px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+main { grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+.console, .consolefoot { background: var(--sidebar); }
+.consolehead { padding: 10px 13px 6px; }
+.consolehead h2 { font-size: 14px; }
+.consoletabs, .viewtabs {
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--quiet-line);
+  border-radius: 9px;
+  background: var(--segment);
+}
+.consoletabs { margin: 6px 0 0; }
+.consoletabs > button, .viewtabs > button {
+  padding: 4px 9px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.consoletabs > button { flex: 1; }
+.consoletabs > button.active, .viewtabs > button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px #2021271a;
+}
+.consoletabs > button:focus-visible, .viewtabs > button:focus-visible { outline-offset: -2px; }
+.parameters { padding: 0 9px 8px 0; }
+.parameters .panel {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.parameters .panel ~ .panel { border-top: 1px solid var(--line); }
+.parameters .panel .phead { min-height: 36px; background: transparent; border: 0; }
+.parameters h2 { font-size: 14px; color: var(--text); }
+.parameters .body { padding: 3px 12px 12px; }
+.parameters label, .consolefoot label, .parameters .chk, #engineNote { color: var(--muted); font-size: 11px; }
+.parameters .fields > label.wide { flex-basis: 100%; }
+.geometry-derived { display: block; margin-top: 2px; }
+
+/* A pair shares label, control and note tracks, including when a title wraps. */
+@supports (grid-template-rows: subgrid) {
+  .parameters .fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 10px;
+  }
+  .parameters .fields > *, .parameters .req-cover-fields > label { margin-bottom: 8px; }
+  .parameters .fields > :not(label),
+  .parameters .fields > label:is(.wide, .select-expanded),
+  .parameters .fields > label:has(> select):not(.selhalf) { grid-column: 1 / -1; }
+  .parameters .req-cover-fields { row-gap: 0; }
+  .parameters :is(.fields, .req-cover-fields) > label {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+    align-self: stretch;
+  }
+  .parameters :is(.fields, .req-cover-fields) > label > :is(input, select) { grid-row: 2; }
+  .parameters :is(.fields, .req-cover-fields) > label > :is(.geometry-derived, .select-full-label) { grid-row: 3; }
+  .parameters :is(.fields, .req-cover-fields) > label > .rv { grid-row: 4; }
+}
+.parameters :is(input:not([type=checkbox]):not([type=radio]):not([type=file]), select), .consolefoot select {
+  min-height: var(--control-height);
+  padding: 5px 8px;
+  border-color: var(--control-border);
+  border-radius: var(--control-radius);
+  background-color: var(--control);
+  line-height: 1.35;
+}
+.parameters :is(input, select):focus { background-color: var(--surface); border-color: var(--accent); }
+.parameters :is(input, select):disabled, #parameterScroll input[readonly] { background-color: #e8eaf0; }
+.parameters label.diff :is(input, select) { background-color: #fffcf5; border-color: #d7bb84; }
+.parameters .req-details { border-color: var(--line); background: #f4f5f8; }
+.consolefoot { padding: 8px 12px 9px; }
+.consolefoot .workflow-controls { grid-template-columns: minmax(0, 1fr); margin-bottom: 7px; }
+.consolefoot .workflow-controls select { margin-top: 0; }
+#btnStart, #btnStop { border-radius: var(--control-radius); min-height: 34px; }
+#btnStart { padding: 6px 11px; }
+
+.statusstrip { padding: 5px var(--result-gutter) 4px; }
+.barwrap { left: var(--result-gutter); right: var(--result-gutter); }
+.workspace > .stats {
+  margin: 6px var(--result-gutter);
+  border-radius: var(--card-radius);
+  box-shadow: none;
+}
+.stat {
+  padding: 5px 9px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 34px;
+}
+.stat > span { color: var(--muted); font-size: 10px; }
+.stat strong { color: var(--text); font-size: 19px; font-weight: 650; text-align: end; }
+.workspacebar { padding: 0 var(--result-gutter); }
+.viewtabs { width: max-content; max-width: 100%; }
+.viewtabs > button { flex: 0 0 auto; }
+.resulttools { gap: 6px; padding: 6px var(--result-gutter); position: relative; }
+.resulttools > button, .resulttools > select, .resulttools > label select { min-height: var(--control-height); font-size: 11px; }
+.resulttools > button { padding: 4px 8px; color: var(--text); border-color: var(--line); }
+.resulttools #snapshotSelect { width: clamp(150px, 19vw, 252px); flex: 0 1 auto; color: var(--text); }
+.resulttools .task-details > summary { font-size: 11px; }
+.resulttools .toolmenu-panel > a { font-size: 12px; color: var(--text); }
+.task-details-body { max-width: calc(100vw - 24px); }
+
+.viewscroll { padding: 0 var(--result-gutter) 6px; }
+.overviewgrid { gap: 12px; }
+.plotcard {
+  border-color: var(--line);
+  border-radius: var(--card-radius);
+  background: var(--surface);
+  box-shadow: none;
+}
+.plotcard .phead {
+  min-height: 33px;
+  padding: 5px 10px;
+  border-color: var(--quiet-line);
+  gap: 6px;
+}
+.plotcard .phead h3 { font-size: 12px; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.plotcard .phead .small { text-align: end; }
+.plotcard .phead .textbutton {
+  flex: none;
+  padding: 2px 6px;
+  background: #f0f2f7;
+  border-radius: 6px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.plotcard .preview { padding: 3px; }
+.empty, .empty b, .analysisnote, .chartleg, .workfooter { color: var(--muted); }
+.workfooter { background: var(--bg); border-color: var(--line); height: 20px; }
+.suite-nav, .suite-settings { border-color: var(--line); border-radius: 9px; }
+.suite-nav .suite-groups button.active { background: var(--surface); color: var(--text); }
+::-webkit-scrollbar-thumb { background: #c7c9d1; border-color: var(--bg); }
+
+@media (min-width: 881px) and (max-width: 1150px) {
+  .stat { flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; }
+  .stat strong { align-self: flex-end; }
+}
+
+@media (max-width: 880px) {
+  .header-actions { justify-content: flex-start; }
+  .workspace > .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #resultExport { position: static; }
+  .resulttools .toolmenu-panel { inset-inline-end: var(--result-gutter); }
+}
+
+@media (max-width: 640px) {
+  :root { --result-gutter: 9px; }
+  .apphead { padding: 8px 10px; gap: 7px; }
+  .identity h1 { font-size: 18px; }
+  .librarytools { flex: 1 0 100%; order: -1; }
+  .console { height: min(510px, 75dvh); min-height: 330px; }
+  .consolehead { padding-inline: 10px; }
+  .parameters { padding-right: 4px; }
+  .resulttools #snapshotSelect { flex: 1 1 150px; }
+  .overviewgrid { gap: 8px; }
+  .viewtabs { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button, #bar { transition: none; }
+  .dot.running { animation: none; }
+}
