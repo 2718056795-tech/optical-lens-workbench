@@ -101,6 +101,7 @@ function makeEmpty(host, title, message=""){
 }
 function showTab(name){
   if(!$("view-"+name))return;
+  if(name!==activeTab)window.analysisSuite?.dismissSettings();
   activeTab=name;
   document.querySelectorAll("#viewTabs [data-tab]").forEach(b=>{const selected=b.dataset.tab===name;b.classList.toggle("active",selected);b.setAttribute("aria-selected",String(selected));b.tabIndex=selected?0:-1;});
   document.querySelectorAll(".view").forEach(v=>{const selected=v.id==="view-"+name;v.hidden=!selected;v.classList.toggle("active",selected);});

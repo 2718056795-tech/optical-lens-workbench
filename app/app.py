@@ -268,7 +268,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send(404, "index.html missing")
             return
-        if path in ("/web/workbench.css", "/web/glass.css", "/web/light-results.css", "/web/analysis-suite.css", "/web/analysis-suite.js", "/web/seq-import.js", "/web/seq-import.css", "/web/controls.js", "/web/workbench.js", "/web/glass-ui.js", "/web/viewer3d.js", "/web/requirements.css", "/web/requirements-ui.js", "/web/design-import.js", "/web/desktop-theme.css", "/web/desktop-toolbar.js"):
+        if path in ("/web/workbench.css", "/web/glass.css", "/web/light-results.css", "/web/analysis-suite.css", "/web/analysis-suite.js", "/web/seq-import.js", "/web/seq-import.css", "/web/controls.js", "/web/workbench.js", "/web/glass-ui.js", "/web/viewer3d.js", "/web/requirements.css", "/web/requirements-ui.js", "/web/design-import.js", "/web/desktop-theme.css", "/web/desktop-toolbar.js", "/web/mtf-yield.css", "/web/mtf-yield.js"):
             f = WEB_DIR / path.rsplit("/", 1)[-1]
             ctype = "text/css; charset=utf-8" if f.suffix == ".css" else "text/javascript; charset=utf-8"
             self._send(200, f.read_bytes(), ctype)
@@ -495,6 +495,18 @@ class Handler(BaseHTTPRequestHandler):
                 raw=base64.b64decode(body['data'],validate=True)
                 self._send_json(200,inspect_seq(raw,str(body.get('filename','lens.seq'))))
             except (ValueError,TypeError,binascii.Error) as exc:self._send_json(400,{'error':str(exc)})
+            return
+        if url.path == '/api/mtf-yield':
+            try:
+                from mtf_yield import analyze_request
+                body = json_body(self, max_len=12 * 1024 * 1024)
+                if not isinstance(body, dict):
+                    raise ValueError('需要一份或两份 TXT，每份不超过 4 MiB')
+                result = analyze_request(body)
+            except ValueError as exc:
+                self._send_json(400, {'error': str(exc)})
+            else:
+                self._send_json(200, result)
             return
         if url.path in ('/api/analysis-start','/api/analysis-cancel'):
             try:

@@ -1,0 +1,75 @@
+body:has(#view-advanced.active .mtf-yield:not([hidden])) #btnAnalysis { display: none; }
+
+.mtf-yield {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.mtf-yield-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+.mtf-yield-controls label { color: var(--muted); font-size: 11px; }
+.mtf-yield-import { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.mtf-yield-import button { min-height: 32px; flex: none; white-space: nowrap; }
+.mtf-yield-file { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.mtf-yield-file .mtf-yield-remove { width: 32px; padding: 0; font-size: 16px; }
+.mtf-yield-filename { min-width: 0; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.mtf-yield-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.mtf-yield-actions .chk { flex: 0 1 auto; margin: 0; white-space: nowrap; }
+#mtfYieldCalculate { min-height: 32px; background: #0064d6; border-color: #0064d6; color: white; white-space: nowrap; }
+#mtfYieldCalculate:not(:disabled):hover { background: #0057be; }
+#mtfYieldStatus { padding-inline: 2px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+#mtfYieldStatus.error { color: #ad2936; }
+.mtf-yield-result { padding: 10px 12px; flex: 0 0 auto; }
+.mtf-yield-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin-bottom: 4px; }
+.mtf-yield-heading span { color: var(--muted); font-size: 11px; }
+#mtfYieldPlot {
+  display: block;
+  width: 100%;
+  height: clamp(300px, 51dvh, 560px);
+  color: var(--muted);
+  font: 11px system-ui, sans-serif;
+  touch-action: pan-y;
+}
+#mtfYieldPlot text { fill: currentColor; }
+.mtf-yield-grid { stroke: #e2e6ed; stroke-width: 1; }
+.mtf-yield-axis { stroke: #8190a1; stroke-width: 1; fill: none; }
+.mtf-yield-legend { display: flex; flex-wrap: wrap; gap: 4px 6px; max-height: 175px; overflow: auto; padding: 3px 1px; }
+.mtf-yield-legend .mtf-yield-curve {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 6px;
+  border-color: var(--quiet-line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: start;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.mtf-yield-curve[aria-pressed="false"] { opacity: .62; text-decoration: line-through; }
+.mtf-yield:not(.show-worst-field) .mtf-yield-minimum { display: none; }
+.mtf-yield-swatch { flex: 0 0 15px; border-top: 2px solid; }
+.mtf-yield-swatch.sag { border-top-style: dashed; }
+.mtf-yield-warnings, .mtf-yield-reports { margin: 6px 0 0; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.mtf-yield-warnings { padding: 5px 8px 5px 24px; border-radius: 6px; background: #fff5e6; color: #8a4918; }
+.mtf-yield-reports { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 6px 10px; list-style: none; padding: 0; }
+.mtf-yield-reports li { display: grid; gap: 2px; padding-top: 5px; border-top: 1px solid var(--quiet-line); }
+
+@media (max-width: 1050px) {
+  .mtf-yield-controls { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .mtf-yield { overflow: visible; }
+  #mtfYieldPlot { height: 320px; }
+}

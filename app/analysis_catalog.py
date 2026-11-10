@@ -3,9 +3,9 @@ import math
 
 VERSION=5
 ENGINES={'optiland':'Optiland 0.6.3','autolens':'AutoLens e58db32'}
-GROUPS={'mtf':'MTF','spot':'点像分析','aberration':'场曲 / 畸变 / 色差','fan':'光扇 / 像差','wavefront':'波前','pupil':'光瞳 / 角度','energy':'能量 / 偏振','simulation':'图像模拟','tolerance':'公差'}
-# Keep existing main tabs; advanced groups share one additional main entry.
-SLOTS={'mtf':'mtf','spot':'spot','aberration':'aberration','fan':'fan','wavefront':'advanced','pupil':'advanced','energy':'advanced','simulation':'advanced','tolerance':'advanced'}
+GROUPS={'mtf':'MTF','spot':'点像分析','aberration':'场曲 / 畸变 / 色差','fan':'光扇 / 像差','tolerance':'公差'}
+# Keep the established slot ID for the tolerance tab.
+SLOTS={'mtf':'mtf','spot':'spot','aberration':'aberration','fan':'fan','tolerance':'advanced'}
 ROWS=[
  ('fft_mtf','mtf','FFT 衍射 MTF','scalar FFT wavefront PSF / complex OTF'),
  ('huygens_mtf','mtf','Huygens 衍射 MTF','scalar Huygens-Fresnel PSF / complex OTF'),
@@ -21,14 +21,6 @@ ROWS=[
  ('spherochromatic','aberration','球差随波长','real on-axis longitudinal ray intercept'),
  ('best_fan','fan','最佳拟合光扇','Optiland BestFitRayFan'),
  ('seidel','fan','Seidel / 一阶色差贡献','native Seidel and chromatic coefficients; V4 plots'),
- ('opd','wavefront','OPD 波前图','Optiland OPD'),('opd_fan','wavefront','OPD 光扇','Optiland OPDFan'),
- ('zernike','wavefront','Zernike 拟合 / 残差','Optiland ZernikeOPD fit, residual and V4 coefficient chart'),
- ('wavefront_field','wavefront','波前 RMS 随视场','Optiland RmsWavefrontErrorVsField'),
- ('pupil','pupil','光瞳像差','Optiland PupilAberration'),('field_angle','pupil','视场入射角 / 像高','Optiland FieldIncidentAngleVsHeight'),
- ('pupil_angle','pupil','光瞳入射角 / 高度','Optiland PupilIncidentAngleVsHeight'),('yybar','pupil','Y–Ȳ 图','Optiland YYbar'),
- ('irradiance','energy','像面辐照度分布','Optiland normalized IncoherentIrradiance'),
- ('intensity','energy','辐射强度分布','Optiland relative RadiantIntensity'),('jones','energy','Jones 光瞳','Optiland JonesPupil; native Fresnel polarization'),
- ('image_simulation','simulation','测试图成像模拟','Optiland spatially variable FFT PSF convolution and distortion'),
  ('sensitivity','tolerance','公差敏感度','Optiland SensitivityAnalysis; nominal absolute parameter sweeps'),
  ('monte_carlo','tolerance','蒙特卡洛公差','Optiland MonteCarlo; uniform independent absolute parameter samples'),
 ]
@@ -54,9 +46,6 @@ AUTO_ROWS=[
  ('curvature','aberration','原生子午最佳焦面场曲','GeoLens.draw_field_curvature'),
  ('grid_distortion','aberration','原生畸变网格','GeoLens.draw_distortion_map'),
  ('seidel','fan','原生 Seidel / CL / CT','GeoLens.aberration_histogram'),
- ('opd','wavefront','原生 OPD 波前','GeoLens.draw_wavefront_error'),
- ('vignetting','energy','原生渐晕 / 光线有效率','GeoLens.draw_vignetting'),
- ('image_simulation','simulation','原生光线图像模拟','GeoLens.render(method=ray_tracing) / input-display adapter'),
  ('sensitivity','tolerance','原生 RMS 梯度公差敏感度','GeoLens.tolerancing_sensitivity'),
  ('monte_carlo','tolerance','原生蒙特卡洛公差','GeoLens.tolerancing_monte_carlo'),
 ]
@@ -109,4 +98,5 @@ def normalize_options(raw=None):
 
 def catalog_payload():return dict(version=VERSION,engines=ENGINES,groups=dict(layout='光路布局',three='原生3D',**GROUPS),analyses=list(CATALOG.values()),
                                  by_engine={engine:list(engine_catalog(engine).values()) for engine in ENGINES},defaults=normalize_options(),
-                                 unsupported={'autolens':['原生 F-tan 畸变曲线','专用 RayFan / OPDFan','Zernike 分解','包围能量','Jones 偏振'], 'optiland':[]})
+                                 external_analyses=[dict(id='mtf_yield',group='tolerance',slot='advanced',label='MTF 良率（导入 TXT）',method='V6 蒙特卡罗报告统计')],
+                                 unsupported={'autolens':['原生 F-tan 畸变曲线','专用 RayFan','包围能量'], 'optiland':[]})

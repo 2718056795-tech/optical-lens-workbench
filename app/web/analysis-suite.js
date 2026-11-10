@@ -1,6 +1,6 @@
 /* Secondary analysis navigation. Calculations are explicit, cached and cancellable. */
 (()=>{
-  let catalog,job=null,lastLens=null,image=null,engine='optiland',ready=false,pending=false,objectViewReady=false,stopContinueReady=false;const panels=new Map(),results=new Map();
+  let catalog,job=null,lastLens=null,engine='optiland',ready=false,pending=false,objectViewReady=false,stopContinueReady=false;const panels=new Map(),results=new Map();
   const sourceToken=()=>{const r=selectedPrescription();return (r.source_file||'')+'|'+(r.source_sha256||'');};
   const cacheKey=(run,id,e=engine,token=sourceToken())=>e+'|'+run+'|'+token+'|'+id;
   const matchesSource=result=>{const r=selectedPrescription();return (!result.source_file||result.source_file===r.source_file)&&(!r.source_sha256||result.source_sha256===r.source_sha256);};
@@ -56,13 +56,52 @@
   }
   function fillWaves(select){const prev=select.value;select.replaceChildren(new Option('全部采样波长','all'),new Option('主波长','primary'));for(const w of currentScene?.wavelengths||[])select.append(new Option(`${(w*1000).toFixed(2).replace(/\.?0+$/,'')} nm`,w*1000));if(select.dataset.option==='reference_wave'){select.options[0].remove();select.value='primary';}if([...select.options].some(o=>o.value===prev))select.value=prev;}
   function message(panel,text,error=false){panel.status.textContent=text;panel.status.classList.toggle('error',error);panel.status.classList.toggle('complete',!error&&text.startsWith('计算完成'));}
+  let openSettings = null, settingsFrame = 0;
+  function dismissSettings() {
+    if (openSettings?.popup.matches(':popover-open')) openSettings.popup.hidePopover();
+  }
+  function positionSettings() {
+    settingsFrame = 0;
+    if (!openSettings) return;
+    const {trigger, popup} = openSettings;
+    const anchor = trigger.getBoundingClientRect();
+    const view = $('viewScroll').getBoundingClientRect();
+    const {clientWidth, clientHeight} = document.documentElement;
+    const edge = 8, gap = 6;
+    if (!anchor.width || anchor.bottom <= Math.max(edge, view.top) || anchor.top >= Math.min(clientHeight - edge, view.bottom)) {
+      dismissSettings();
+      return;
+    }
+    const leftEdge = Math.max(edge, view.left + edge);
+    const rightEdge = Math.min(clientWidth - edge, view.right - edge);
+    const width = Math.min(480, rightEdge - leftEdge);
+    popup.style.width = `${width}px`;
+    popup.style.left = `${Math.max(leftEdge, Math.min(anchor.left, rightEdge - width))}px`;
+
+    const below = clientHeight - edge - anchor.bottom - gap;
+    const above = anchor.top - edge - gap;
+    const needed = popup.scrollHeight + popup.offsetHeight - popup.clientHeight;
+    const opensAbove = needed > below && above > below;
+    popup.style.maxHeight = `${Math.max(0, opensAbove ? above : below)}px`;
+    popup.style.top = `${opensAbove ? anchor.top - gap - popup.getBoundingClientRect().height : anchor.bottom + gap}px`;
+    popup.dataset.positioned = 'true';
+  }
+  function queueSettingsPosition() {
+    if (openSettings && !settingsFrame) settingsFrame = requestAnimationFrame(positionSettings);
+  }
+  document.addEventListener('scroll', queueSettingsPosition, {capture:true, passive:true});
+  window.addEventListener('resize', queueSettingsPosition);
+
+  const isYield = panel => panel.mtfYield && panel.select.value==='mtf_yield';
   function refresh(panel){
-    const id=panel.select.value,basic=id==='basic';panel.basic&&(panel.basic.hidden=!basic);panel.extra.hidden=basic;panel.advanced.hidden=basic;panel.tools.hidden=basic;
+    const id=panel.select.value,basic=id==='basic',external=isYield(panel);panel.basic&&(panel.basic.hidden=!basic);panel.extra.hidden=basic||external;panel.settingsTrigger.hidden=basic||external;panel.tools.hidden=basic||external;
+    if(panel.settingsPopup.matches(':popover-open'))panel.settingsPopup.hidePopover();
+    if(panel.mtfYield)panel.mtfYield.host.hidden=!external;
     panel.ignoreLabel.hidden=!['layout','native_3d'].includes(id);
-    if(basic){panel.advanced.open=false;return;}
+    if(basic||external)return;
     for(const b of panel.groups.children)b.classList.toggle('active',b.dataset.analysis===id||(b.dataset.analysis==='basic'&&basic));
     panel.form.replaceChildren();for(const key of (engine==='autolens'?autoRelevant:relevant)[id]||[])panel.form.append(input(key));if(engine==='optiland'&&['lateral_color','axial_color'].includes(id))panel.form.append(input('reference_wave'));
-    panel.form.onchange=()=>{panel.output.replaceChildren();message(panel,'参数已更改，请计算分析；当前设置尚未计算。');};panel.nativeOpen.hidden=id!=='native_3d';panel.imageLabel.hidden=id!=='image_simulation';panel.description.textContent=(catalog.by_engine[engine].find(a=>a.id===id)?.method||'')+' · '+catalog.engines[engine];
+    panel.form.onchange=()=>{panel.output.replaceChildren();message(panel,'参数已更改，请计算分析；当前设置尚未计算。');};panel.nativeOpen.hidden=id!=='native_3d';panel.description.textContent=(catalog.by_engine[engine].find(a=>a.id===id)?.method||'')+' · '+catalog.engines[engine];
     panel.output.replaceChildren();message(panel,'选择有效保存处方后，点击「计算分析」。');
     const saved=results.get(cacheKey(currentLens||'',id));if(saved&&viewMatches(panel,saved)){for(const x of panel.form.querySelectorAll('[data-option]')){const value=saved.options[x.dataset.option];if(value!==undefined)x.value=Array.isArray(value)?value.join(','):value;}paint(panel,saved);}
   }
@@ -86,13 +125,14 @@
   function updateBusy(){if(ready)$('btnAnalysis').disabled=!!job||pending||!hasSavedPrescription();for(const p of panels.values()){p.start.disabled=!!job||pending;p.cancel.hidden=!job;p.cancel.disabled=!job;p.ignore.disabled=!objectViewReady||!!job||pending;}}
   async function run(panel){
     if(!ready)return;
+    if(isYield(panel))return panel.mtfYield.run();
     if(job||pending){message(panel,'已有分析正在计算，请等待或取消。');return;}
     if(panel.select.value==='basic'){if(panel.slot==='layout'){message(panel,'流程保存光路可直接查看；选择具体分析后计算。');return;}return runAnalysis(currentLens,true);}
     if(!hasSavedPrescription()){message(panel,'请先载入有效保存处方；停止后的阶段结构也可以分析。',true);return;}
     freezeSourceView();const id=panel.select.value,run=currentLens,selectedEngine=engine,token=sourceToken(),ref=selectedPrescription(),options={};for(const x of panel.form.querySelectorAll('[data-option]'))options[x.dataset.option]=x.value;
     if(objectViewReady&&['layout','native_3d'].includes(id))options.ignore_object=panel.ignore.checked;
     message(panel,'准备分析…');pending=true;updateBusy();
-    try{const d=await postJson('/api/analysis-start',{run_id:run,engine:selectedEngine,analysis_id:id,options,image:id==='image_simulation'?image:null,force:panel.force.checked,...ref});
+    try{const d=await postJson('/api/analysis-start',{run_id:run,engine:selectedEngine,analysis_id:id,options,force:panel.force.checked,...ref});
       if(d.status==='finished'){if(d.result.engine!==selectedEngine)throw Error('后端未支持所选内核，请关闭工作台后重新打开。');results.set(cacheKey(run,id,selectedEngine,token),d.result);if(engine===selectedEngine&&panel.select.value===id)paint(panel,d.result);return;}
       job={id:d.job_id,panel,run,analysis:id,engine:selectedEngine,sourceToken:token};updateBusy();await monitor();
     }catch(e){message(panel,e.message,true);}finally{pending=false;updateBusy();}
@@ -110,21 +150,49 @@
     if(basic){while(view.firstChild)basic.append(view.firstChild);view.append(basic);}
     if(basic){const notes=[...basic.children].filter(x=>x.classList.contains('viewnote'));if(notes.length){const info=el('details','suite-basic-notes');info.append(el('summary','','说明'),...notes);basic.append(info);}}
     view.classList.add('suite-view');const nav=el('div','suite-nav'),groups=el('div','suite-groups'),select=el('select','suite-select');select.setAttribute('aria-label','分析类型');
-    const extra=el('div','suite-extra'),tools=el('div','suite-tools'),description=el('p','suite-description'),form=el('div','suite-form'),advanced=el('details','suite-settings');advanced.append(el('summary','','分析参数'),form,description);
+    const extra=el('div','suite-extra'),tools=el('div','suite-tools'),description=el('p','suite-description'),form=el('div','suite-form');
+    const settingsTrigger=el('button','suite-settings-trigger','分析参数');
+    const settingsPopup=el('div','suite-settings-panel');
+    const settingsInfo=el('details','suite-settings-info'),capability=el('p','suite-capability');
+    settingsTrigger.type='button';
+    settingsPopup.id=`suite-settings-${slot}`;
+    settingsPopup.setAttribute('popover','auto');
+    settingsPopup.setAttribute('role','group');
+    settingsPopup.setAttribute('aria-label','分析参数');
+    settingsTrigger.setAttribute('popovertarget',settingsPopup.id);
+    settingsTrigger.setAttribute('aria-controls',settingsPopup.id);
+    settingsTrigger.setAttribute('aria-expanded','false');
+    settingsInfo.append(el('summary','','计算说明'),description,capability);
+    settingsPopup.append(form,settingsInfo);
+    settingsInfo.addEventListener('toggle',queueSettingsPosition);
+    settingsPopup.addEventListener('beforetoggle',event=>{
+      const opening=event.newState==='open';
+      settingsTrigger.setAttribute('aria-expanded',String(opening));
+      if(opening){
+        delete settingsPopup.dataset.positioned;
+        openSettings={trigger:settingsTrigger,popup:settingsPopup};
+        queueSettingsPosition();
+      }else if(openSettings?.popup===settingsPopup){
+        openSettings=null;
+      }
+    });
     const start=el('button','suite-start','计算分析'),cancel=el('button','','取消分析'),status=el('p','suite-status',''),forceLabel=el('label','chk'),force=el('input');force.type='checkbox';forceLabel.append(force,document.createTextNode('重新计算'));
-    const imageLabel=el('label','suite-upload','测试图（可选，≤2MB；转灰度）'),upload=el('input');upload.type='file';upload.accept='image/png,image/jpeg,image/bmp';imageLabel.append(upload);upload.onchange=async()=>{const f=upload.files[0];if(!f){image=null;return;}if(f.size>2*1024*1024){message(panel,'图像超过2MB',true);upload.value='';image=null;return;}image=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(f);});};
     const nativeOpen=el('button','','打开原生交互窗口 ↗');nativeOpen.hidden=true;nativeOpen.onclick=async()=>{try{if(!hasSavedPrescription())throw Error('请先载入保存处方');await postJson('/api/native3d/open',{run_id:currentLens,engine,ignore_object:panel.ignore.checked,...selectedPrescription()});notify('已请求打开'+engine+'原生3D窗口，首次载入需要等待；可在原生窗口拖动缩放。');}catch(e){message(panel,e.message,true);}};
     const ignoreLabel=el('label','chk suite-ignore-object'),ignore=el('input');ignore.type='checkbox';ignore.checked=ignoreObject;ignoreLabel.title='仅调整显示，不改变实际物距和追迹；AutoLens原生3D保持平行光约定';ignoreLabel.append(ignore,document.createTextNode('忽略物面'));
     if(!objectViewReady){ignore.checked=false;ignoreLabel.title='此开关需要关闭并重新打开V10.0.0，以加载新后台；刷新页面无法更新后台';ignoreLabel.append(el('small','','需重开'));}
-    tools.append(start,cancel,nativeOpen,forceLabel);advanced.append(imageLabel);extra.append(status);const output=el('div','suite-output');extra.append(output);nav.append(groups,select,advanced,ignoreLabel,tools);view.prepend(nav);view.append(extra);
-    const capability=el('p','suite-capability');advanced.append(capability);
-    const panel={slot,basic,extra,select,form,start,cancel,status,description,imageLabel,output,force,advanced,tools,groups,nativeOpen,ignore,ignoreLabel};panels.set(slot,panel);start.onclick=()=>run(panel);cancel.onclick=async()=>{if(!job)return;try{await postJson('/api/analysis-cancel',{job_id:job.id});}catch(e){message(panel,e.message,true);}};
+    tools.append(start,cancel,nativeOpen,forceLabel);extra.append(status);const output=el('div','suite-output');extra.append(output);nav.append(groups,select,settingsTrigger,settingsPopup,ignoreLabel,tools);view.prepend(nav);view.append(extra);
+    const mtfYield=slot==='advanced'&&window.mtfYield?.mount(view);
+    const panel={slot,basic,extra,select,form,start,cancel,status,description,output,force,settingsTrigger,settingsPopup,tools,groups,nativeOpen,ignore,ignoreLabel,mtfYield};panels.set(slot,panel);start.onclick=()=>run(panel);cancel.onclick=async()=>{if(!job)return;try{await postJson('/api/analysis-cancel',{job_id:job.id});}catch(e){message(panel,e.message,true);}};
     ignore.onchange=()=>{ignoreObject=ignore.checked;try{localStorage.setItem('lens-workbench-ignore-object',String(ignoreObject));}catch(e){}const hadOutput=!!panel.output.querySelector('img');for(const p of panels.values()){p.ignore.checked=ignoreObject;if(['layout','native_3d'].includes(p.select.value)){p.output.replaceChildren();message(p,'视图已切换，点击计算分析；实际物距未改变。');}}if(hadOutput&&!job&&!pending)run(panel);};
-    function group(key){select.replaceChildren();if(basic&&engine==='optiland'&&slot!=='three')select.append(new Option('外层组合图（旧版 '+names[slot]+'）','basic'));for(const a of catalog.by_engine[engine].filter(a=>a.group===key)){const option=new Option(a.label+(a.available===false?' · 未启用':''),a.id);option.disabled=a.available===false;option.title=a.reason||a.method;select.append(option);}
+    function group(key){const previous=select.value;select.replaceChildren();if(basic&&engine==='optiland'&&slot!=='three')select.append(new Option('外层组合图（旧版 '+names[slot]+'）','basic'));
+      const external=mtfYield?(catalog.external_analyses||[]).filter(a=>a.id==='mtf_yield'&&a.group===key&&a.slot===slot):[];
+      for(const a of [...external,...catalog.by_engine[engine].filter(a=>a.group===key)]){const option=new Option(a.label+(a.available===false?' · 未启用':''),a.id);option.disabled=a.available===false;option.title=a.reason||a.method;select.append(option);}
       const defaults=engine==='optiland'?{layout:'layout',three:'native_3d',spot:'native_spot',mtf:'native_geometric_mtf',aberration:'distortion',fan:'native_ray_fan'}:{layout:'layout',three:'native_3d'};if(defaults[slot])select.value=defaults[slot];
+      if(slot==='advanced'&&[...select.options].some(option=>option.value===previous&&!option.disabled))select.value=previous;
       for(const b of groups.children)b.classList.toggle('active',b.dataset.group===key);refresh(panel);}
     panel.rebuild=()=>{groups.replaceChildren();
-      const keys=(slot==='advanced'?['wavefront','pupil','energy','simulation','tolerance']:[slot]).filter(k=>catalog.by_engine[engine].some(a=>a.group===k)||(engine==='optiland'&&basic));
+      const keys=(slot==='advanced'?['tolerance']:[slot]).filter(k=>catalog.by_engine[engine].some(a=>a.group===k)||(engine==='optiland'&&basic));
+      groups.hidden=slot==='advanced';
       for(const key of keys){const b=el('button','',slot==='aberration'?(engine==='optiland'?'原生 T/S 场曲':'子午场曲'):catalog.groups[key]);b.dataset.group=key;if(slot==='aberration')b.dataset.analysis=engine==='optiland'?'native_curvature':'curvature';b.onclick=()=>{group(key);if(slot==='aberration'){select.value=engine==='optiland'?'native_curvature':'curvature';refresh(panel);}};groups.append(b);}
       if(slot==='aberration')for(const [id,title] of engine==='optiland'?[['distortion','畸变曲线'],['native_grid','原生网格'],['lateral_color','横向色差（外层）']]:[['grid_distortion','畸变网格']]){
         const b=el('button','suite-quick',title);b.dataset.analysis=id;b.onclick=()=>{select.value=id;refresh(panel);};groups.append(b);
@@ -153,7 +221,7 @@
   }
   function sourceChanged(){const allowed=currentScene?.analysis_engines||['autolens','optiland'];for(const option of $('analysisEngine').options)option.disabled=!allowed.includes(option.value);if(!allowed.includes(engine)){notify('该导入记录保留原文件的Optiland模型，已选择Optiland直接分析；不使用未验证的跨内核转换。');$('analysisEngine').value=allowed[0];changeEngine();return;}const key=currentLens+'|'+sourceToken();if(lastLens===key)return;lastLens=key;resetAnalysis();
     if(engine==='autolens'&&currentScene?.has_explicit_fields===false){const p=panels.get('spot');p.select.value='spot_radial';refresh(p);$('overviewSpotTitle').textContent='AutoLens 原生径向点列';}
-    for(const p of panels.values()){for(const s of p.form.querySelectorAll('[data-option="wave"],[data-option="reference_wave"]'))fillWaves(s);if(p.select.value!=='basic'){p.output.replaceChildren();message(p,'已选择 '+(selectedPrescription().source_file||'尚无处方')+'；点击计算分析。');const saved=results.get(cacheKey(currentLens||'',p.select.value));if(saved)paint(p,saved);}}
+    for(const p of panels.values()){if(isYield(p))continue;for(const s of p.form.querySelectorAll('[data-option="wave"],[data-option="reference_wave"]'))fillWaves(s);if(p.select.value!=='basic'){p.output.replaceChildren();message(p,'已选择 '+(selectedPrescription().source_file||'尚无处方')+'；点击计算分析。');const saved=results.get(cacheKey(currentLens||'',p.select.value));if(saved)paint(p,saved);}}
     for(const id of ['overviewMtf','overviewSpot'])makeEmpty($(id),'等待当前快照的原生分析','选择分析项目并计算；不会用另一快照的图代替。');
     for(const id of ['native_spot','native_geometric_mtf','spot_fields','spot_radial','native_mtf']){const result=results.get(cacheKey(currentLens,id));if(result)preview(result);}loadSaved(currentLens);updateBusy();
   }
@@ -164,6 +232,6 @@
     setInterval(sourceChanged,500);
 
   }catch(e){$('analysisEngine').disabled=true;$('analysisSource').textContent=e.message;notify('扩展分析初始化失败：'+e.message,true);}}
-  window.analysisSuite={get engine(){return engine;},get stopContinueReady(){return stopContinueReady;},get legacy(){return engine==='optiland'&&[...panels.values()].some(p=>p.select.value==='basic');},get job(){return job;},get busy(){return !!job||pending;},get panels(){return panels;},get ready(){return ready;},runCurrent,loadSaved,sourceChanged};init();
+  window.analysisSuite={get engine(){return engine;},get stopContinueReady(){return stopContinueReady;},get legacy(){return engine==='optiland'&&[...panels.values()].some(p=>p.select.value==='basic');},get job(){return job;},get busy(){return !!job||pending;},get panels(){return panels;},get ready(){return ready;},runCurrent,loadSaved,sourceChanged,dismissSettings};init();
 })();
 
